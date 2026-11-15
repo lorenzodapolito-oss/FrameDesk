@@ -13,7 +13,7 @@ Analizzatore di qualità video, scritto in Rust con egui. Porta in Rust il «Vid
 
 Per ogni video `ffprobe` legge le informazioni e `ffmpeg` estrae alcuni fotogrammi (più quelli ai cambi di scena). Su ognuno si misurano:
 
-- **Purezza**: blocchettatura e ringing della compressione (100 − blocchi·2,2 − ringing·0,5);
+- **Purezza**: blocchettatura e ringing della compressione (100 − blocchi·1,2 − ringing·0,5; la griglia dei blocchi si cerca sul profilo senza l'andamento lento, così le immagini naturali non finiscono a zero);
 - **Densità**: dettaglio reale con FFT, ridotto se sembra un upscaling;
 - **Stabilità**: sfarfallio, fermi immagine ed efficienza del bitrate.
 

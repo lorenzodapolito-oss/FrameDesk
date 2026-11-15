@@ -82,7 +82,7 @@ impl Anchors {
     pub fn normalized(&self, r: &VideoResult) -> Norm {
         if self.anchors.len() < 2 {
             return Norm {
-                purity: (100.0 - r.blockiness * 12.0).clamp(0.0, 100.0),
+                purity: r.purity_raw.clamp(0.0, 100.0),
                 density: (r.fft_ratio * 400.0 * (1.0 - r.upscale_score * 0.5)).clamp(0.0, 100.0),
                 stability: r.stability_raw.clamp(0.0, 100.0),
                 has_anchors: false,
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn without_anchors_it_uses_fixed_scales() {
         let a = Anchors::new("x");
-        let n = a.normalized(&res(0.0, 0.0, 70.0));
+        let n = a.normalized(&res(76.0, 0.0, 70.0));
         assert!(!n.has_anchors);
         assert_eq!(n.purity, 76.0);
         assert!((n.density - 30.0).abs() < 1e-9);

@@ -60,19 +60,26 @@ pub fn purity(gray: &Gray, cfg: &Config) -> Purity {
         })
         .collect();
 
+    // Si toglie l'andamento lento del profilo (media mobile): resta solo la parte che si ripete
+    // ogni `spacing` pixel, cioè la griglia dei blocchi. Senza questo, qualunque immagine naturale
+    // dava una correlazione altissima e la purezza finiva sempre a zero.
+    let detrend = |p: &[f64], s: usize| -> Vec<f64> {
+        let half = s.max(1);
+        (0..p.len())
+            .map(|i| {
+                let lo = i.saturating_sub(half);
+                let hi = (i + half + 1).min(p.len());
+                let win = p.get(lo..hi).unwrap_or(&[]);
+                p.get(i).copied().unwrap_or(0.0) - imgproc::mean(win)
+            })
+            .collect()
+    };
     let corr = |p: &[f64], s: usize| -> f64 {
         if p.len() > s * 2 {
-            let a = p.get(..p.len() - s).unwrap_or(&[]);
-            let b = p.get(s..).unwrap_or(&[]);
-            imgproc::pearson(a, b)
-        } else {
-            0.0
-        }
-    };
-    let regularity = |p: &[f64], s: usize| -> f64 {
-        let sampled: Vec<f64> = p.iter().step_by(s.max(1)).copied().collect();
-        if sampled.len() > 2 {
-            imgproc::std(&sampled) / (imgproc::mean(&sampled) + 1e-6)
+            let d = detrend(p, s);
+            let a = d.get(..d.len() - s).unwrap_or(&[]);
+            let b = d.get(s..).unwrap_or(&[]);
+            imgproc::pearson(a, b).max(0.0)
         } else {
             0.0
         }
@@ -84,9 +91,7 @@ pub fn purity(gray: &Gray, cfg: &Config) -> Purity {
         if spacing >= w.min(h) / 2 {
             continue;
         }
-        let avg_corr = (corr(&proj_x, spacing).abs() + corr(&proj_y, spacing).abs()) / 2.0;
-        let reg = (regularity(&proj_x, spacing) + regularity(&proj_y, spacing)) / 2.0;
-        let combined = avg_corr * 0.6 + reg * 0.4;
+        let combined = ((corr(&proj_x, spacing) + corr(&proj_y, spacing)) / 2.0).clamp(0.0, 1.0);
         if combined > best_score {
             best_score = combined;
             best_spacing = Some(spacing);
@@ -110,7 +115,7 @@ pub fn purity(gray: &Gray, cfg: &Config) -> Purity {
     } else {
         0.0
     };
-    let purity_raw = (100.0 - blockiness_raw * 2.2 - ringing * 0.5).max(0.0);
+    let purity_raw = (100.0 - blockiness_raw * 1.2 - ringing * 0.5).max(0.0);
     Purity {
         blockiness: round_to(blockiness_raw, 2),
         blockiness_spacing: best_spacing,
@@ -318,6 +323,15 @@ mod tests {
         assert!(b.blockiness_spacing.is_some_and(|k| k % 8 == 0), "{b:?}");
         assert!(b.purity_raw < s.purity_raw);
         assert!((0.0..=100.0).contains(&b.purity_raw));
+    }
+
+    #[test]
+    fn natural_looking_images_do_not_all_score_zero() {
+        let cfg = Config::default();
+        for img in [smooth(256, 144), noise(256, 144, 3)] {
+            let p = purity(&img, &cfg);
+            assert!(p.purity_raw > 20.0, "{p:?}");
+        }
     }
 
     #[test]

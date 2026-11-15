@@ -639,6 +639,7 @@ mod tests {
             name: "a.mp4".into(),
             duration_sec: 10.0,
             file_size: 12_500_000,
+            purity_raw: 88.0,
             blockiness: 1.0,
             fft_ratio: 0.2,
             upscale_score: 0.0,
