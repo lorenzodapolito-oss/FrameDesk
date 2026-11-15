@@ -38,10 +38,18 @@ mkdir "%OUT%"
 copy /y "target\release\framedesk.exe" "%OUT%\FrameDesk.exe" >nul
 if errorlevel 1 goto fail
 
+if not exist "%ROOT%\ffmpeg\bin\ffmpeg.exe" (
+  echo === Scarico ffmpeg ===
+  if not exist "%ROOT%\ffmpeg" mkdir "%ROOT%\ffmpeg"
+  curl -L -o "%ROOT%\ffmpeg\ffmpeg.zip" https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip
+  powershell -NoProfile -Command "Expand-Archive -Force '%ROOT%\ffmpeg\ffmpeg.zip' '%ROOT%\ffmpeg\x'; New-Item -ItemType Directory -Force '%ROOT%\ffmpeg\bin' | Out-Null; Get-ChildItem '%ROOT%\ffmpeg\x' -Recurse -Include ffmpeg.exe,ffprobe.exe | Copy-Item -Destination '%ROOT%\ffmpeg\bin' -Force"
+  rmdir /s /q "%ROOT%\ffmpeg\x" >nul 2>&1
+  del "%ROOT%\ffmpeg\ffmpeg.zip" >nul 2>&1
+)
 if exist "%ROOT%\ffmpeg\bin\ffmpeg.exe" (
   copy /y "%ROOT%\ffmpeg\bin\ffmpeg.exe" "%OUT%\" >nul
   copy /y "%ROOT%\ffmpeg\bin\ffprobe.exe" "%OUT%\" >nul
-) else echo NOTA: metti ffmpeg.exe e ffprobe.exe accanto a FrameDesk.exe (o nel PATH).
+) else echo NOTA: ffmpeg non scaricato: metti ffmpeg.exe e ffprobe.exe accanto a FrameDesk.exe.
 echo.
 echo FATTO: %OUT%\FrameDesk.exe
 pause
